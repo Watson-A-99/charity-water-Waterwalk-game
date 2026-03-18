@@ -124,15 +124,15 @@ body {
 .brand-logo {
   width: 32px;
   height: 32px;
-  background: var(--cw-yellow);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 16px;
-  color: var(--cw-dark-blue);
+  border-radius: 6px;
+  overflow: hidden;
   flex-shrink: 0;
+}
+
+.brand-logo img {
+  height: 100%;
+  width: auto;
+  display: block;
 }
 
 .brand-text {

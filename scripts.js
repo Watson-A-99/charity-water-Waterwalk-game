@@ -71,7 +71,8 @@ var WIND_BOTTOM_GAP = 40;
 var PAUSE_BTN_X    = W - 55;
 var PAUSE_BTN_Y    = 12;
 var PAUSE_BTN_SIZE = 36;
-var GROUND_SURFACE = GROUND_Y + 5;
+var GROUND_SURFACE = GROUND_Y + 10;
+var PLAYER_DRAW_Y_OFFSET = GROUND_SURFACE - GROUND_Y;
 
 
 // ============================================================
@@ -539,7 +540,7 @@ function drawJerryCan() {
     drawW = SPRITE_DUCK_W;
     drawH = SPRITE_DUCK_H;
     drawX = p.x + (PLAYER_W - drawW) / 2;
-    drawY = p.y - drawH;
+    drawY = p.y - drawH + PLAYER_DRAW_Y_OFFSET;
   } else {
     if (p.invulnTimer > 0 && p.invulnTimer > INVULN_FRAMES - 20) {
       spriteKey = "walkHit";
@@ -555,7 +556,7 @@ function drawJerryCan() {
       drawH = SPRITE_STAND_H;
     }
     drawX = p.x + (PLAYER_W - drawW) / 2;
-    drawY = p.y - drawH;
+    drawY = p.y - drawH + PLAYER_DRAW_Y_OFFSET;
   }
 
   var img = sprites[spriteKey];
@@ -565,10 +566,10 @@ function drawJerryCan() {
     // Fallback rectangle
     ctx.fillStyle = COLORS.yellow;
     var fbH = p.ducking ? DUCK_H : PLAYER_H;
-    ctx.fillRect(p.x, p.y - fbH, PLAYER_W, fbH);
+    ctx.fillRect(p.x, p.y - fbH + PLAYER_DRAW_Y_OFFSET, PLAYER_W, fbH);
     ctx.strokeStyle = "#d4a830";
     ctx.lineWidth = 2;
-    ctx.strokeRect(p.x, p.y - fbH, PLAYER_W, fbH);
+    ctx.strokeRect(p.x, p.y - fbH + PLAYER_DRAW_Y_OFFSET, PLAYER_W, fbH);
   }
 
   ctx.restore();
@@ -615,11 +616,11 @@ function drawDyingAnimation() {
     if (dyingWasDucking) {
       drawW = SPRITE_DUCK_W; drawH = SPRITE_DUCK_H;
       drawX = player.x + (PLAYER_W - drawW) / 2;
-      drawY = player.y - drawH;
+      drawY = player.y - drawH + PLAYER_DRAW_Y_OFFSET;
     } else {
       drawW = SPRITE_HIT_W; drawH = SPRITE_HIT_H;
       drawX = player.x + (PLAYER_W - drawW) / 2;
-      drawY = player.y - drawH;
+      drawY = player.y - drawH + PLAYER_DRAW_Y_OFFSET;
     }
 
     if (img && img._loaded) {
@@ -631,8 +632,8 @@ function drawDyingAnimation() {
 
     var startX = player.x;
     var endX = player.x + 25;
-    var startY = player.y - SPRITE_STAND_H;
-    var endY = player.y - SPRITE_LOSE_H;
+    var startY = player.y - SPRITE_STAND_H + PLAYER_DRAW_Y_OFFSET;
+    var endY = player.y - SPRITE_LOSE_H + PLAYER_DRAW_Y_OFFSET;
 
     var curX = lerp(startX, endX, eased);
     var curY = lerp(startY, endY, eased);
@@ -1376,15 +1377,18 @@ function update() {
   if (!infiniteMode && distance >= TOTAL_DISTANCE) {
     infiniteUnlocked = true;
     endResult = water >= WIN_WATER ? "win" : "partial";
-    // Start cutscene
+    // Start cutscene — if mid-air, land first
     state = "cutscene";
-    cutscenePhase = "decel";
+    cutscenePhase = player.onGround ? "decel" : "landing";
     cutsceneTimer = 0;
     cutsceneSpeedSnap = scrollSpeed;
     cutsceneCamY = 0;
     cutsceneSunScale = 1;
     cutsceneRayAngle = 0;
     cutsceneWhiteout = 0;
+    // Force out of ducking
+    player.ducking = false;
+    player.duckTimer = 0;
   }
 }
 
@@ -1405,6 +1409,34 @@ function easeInOutCubic(t) {
 
 function updateCutscene() {
   cutsceneTimer++;
+
+  // Phase 0: LANDING — finish the jump arc before anything else
+  if (cutscenePhase === "landing") {
+    // Continue gravity + downward motion
+    player.vy += GRAVITY;
+    player.y += player.vy;
+
+    if (player.y >= GROUND_Y) {
+      player.y = GROUND_Y;
+      player.vy = 0;
+      player.onGround = true;
+      // Now transition into decel
+      cutscenePhase = "decel";
+      cutsceneTimer = 0;
+    }
+
+    // Keep scrolling and clearing during landing
+    hillOffset += scrollSpeed;
+    for (var i = drops.length - 1; i >= 0; i--) {
+      drops[i].x -= scrollSpeed;
+      if (drops[i].x < -50) drops.splice(i, 1);
+    }
+    for (var i = obstacles.length - 1; i >= 0; i--) {
+      obstacles[i].x -= scrollSpeed;
+      if (obstacles[i].x < -100) obstacles.splice(i, 1);
+    }
+    return;
+  }
 
   if (cutscenePhase === "decel") {
     // Phase 1: Ease scroll speed to zero
@@ -1526,7 +1558,7 @@ function drawCutscene() {
   drawGround(km);
 
   // Character
-  if (cutscenePhase === "decel" || cutscenePhase === "walkCenter") {
+  if (cutscenePhase === "landing" || cutscenePhase === "decel" || cutscenePhase === "walkCenter") {
     drawJerryCan();
   } else if (cutscenePhase === "spriteSwap" || cutscenePhase === "panSun") {
     drawBack34Sprite();
@@ -1536,7 +1568,9 @@ function drawCutscene() {
 
   // ======== LAYER 4: HUD fade (screen space) ========
   var hudAlpha = 1;
-  if (cutscenePhase === "decel") {
+  if (cutscenePhase === "landing") {
+    hudAlpha = 1;
+  } else if (cutscenePhase === "decel") {
     hudAlpha = 1 - Math.min(cutsceneTimer / (DECEL_FRAMES * 0.6), 1);
   } else {
     hudAlpha = 0;
@@ -1675,17 +1709,17 @@ function drawBack34Sprite() {
   var drawW = SPRITE_BACK34_W;
   var drawH = SPRITE_BACK34_H;
   var drawX = player.x + (PLAYER_W - drawW) / 2;
-  var drawY = player.y - drawH;
+  var drawY = player.y - drawH + PLAYER_DRAW_Y_OFFSET;
 
   if (img && img._loaded) {
     ctx.drawImage(img, drawX, drawY, drawW, drawH);
   } else {
     // Fallback yellow rectangle
     ctx.fillStyle = COLORS.yellow;
-    ctx.fillRect(player.x, player.y - PLAYER_H, PLAYER_W, PLAYER_H);
+    ctx.fillRect(player.x, player.y - PLAYER_H + PLAYER_DRAW_Y_OFFSET, PLAYER_W, PLAYER_H);
     ctx.strokeStyle = "#d4a830";
     ctx.lineWidth = 2;
-    ctx.strokeRect(player.x, player.y - PLAYER_H, PLAYER_W, PLAYER_H);
+    ctx.strokeRect(player.x, player.y - PLAYER_H + PLAYER_DRAW_Y_OFFSET, PLAYER_W, PLAYER_H);
   }
 }
 

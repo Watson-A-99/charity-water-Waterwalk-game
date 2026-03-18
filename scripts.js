@@ -1384,6 +1384,3 @@ function gameLoop() {
   draw();
   requestAnimationFrame(gameLoop);
 }
-
-// Start everything
-gameLoop();

@@ -1,30 +1,583 @@
 /* ============================================================
-   WATER WALK - Page Styles
-   ============================================================
-   The game itself is drawn on a <canvas>, so these styles
-   only control the page layout around the canvas.
+   WATER WALK — Responsive Game Styling
+   charity:water Educational Side-Scroller
    ============================================================ */
 
-/* ---------- RESET ---------- */
-* {
+/* --- Reset & Base --- */
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-/* ---------- PAGE LAYOUT ---------- */
-body {
-  background: #0a0a1a;            /* dark fallback behind canvas */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  overflow: hidden;               /* no scrollbars */
+:root {
+  --cw-yellow: #ffcb3d;
+  --cw-blue: #0090d9;
+  --cw-dark-blue: #1e3a5f;
+  --cw-water-blue: #4db8e8;
+  --cw-black: #0a0e17;
+  --cw-white: #ffffff;
+
+  --surface-dark: #0d1117;
+  --surface-card: #161b22;
+  --surface-border: rgba(255, 203, 61, 0.08);
+
+  --glow-yellow: rgba(255, 203, 61, 0.12);
+  --glow-blue: rgba(0, 144, 217, 0.10);
 }
 
-/* ---------- CANVAS ---------- */
-canvas {
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;
+}
+
+body {
+  font-family: 'DM Sans', 'Segoe UI', sans-serif;
+  background: var(--surface-dark);
+  color: var(--cw-white);
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- Animated Background --- */
+.bg-atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bg-atmosphere::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  left: -20%;
+  width: 70%;
+  height: 70%;
+  background: radial-gradient(ellipse, var(--glow-blue) 0%, transparent 70%);
+  animation: drift-a 18s ease-in-out infinite alternate;
+}
+
+.bg-atmosphere::after {
+  content: '';
+  position: absolute;
+  bottom: -30%;
+  right: -15%;
+  width: 60%;
+  height: 60%;
+  background: radial-gradient(ellipse, var(--glow-yellow) 0%, transparent 70%);
+  animation: drift-b 22s ease-in-out infinite alternate;
+}
+
+@keyframes drift-a {
+  0%   { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(8%, 12%) scale(1.15); }
+}
+
+@keyframes drift-b {
+  0%   { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(-6%, -10%) scale(1.1); }
+}
+
+/* Grain texture overlay */
+.bg-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px;
+}
+
+/* --- Page Layout --- */
+.page-wrapper {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100dvh;
+}
+
+/* --- Top Bar --- */
+.top-bar {
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 32px 12px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-logo {
+  width: 32px;
+  height: 32px;
+  background: var(--cw-yellow);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--cw-dark-blue);
+  flex-shrink: 0;
+}
+
+.brand-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.brand-text span {
+  color: var(--cw-yellow);
+}
+
+.top-links {
+  display: flex;
+  gap: 20px;
+}
+
+.top-links a {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.4);
+  text-decoration: none;
+  transition: color 0.2s;
+  font-weight: 500;
+}
+
+.top-links a:hover {
+  color: var(--cw-yellow);
+}
+
+/* --- Game Frame (Desktop) --- */
+.game-frame {
+  width: 100%;
+  max-width: 1060px;
+  padding: 0 32px;
+  margin-top: 8px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.game-card {
+  width: 100%;
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03),
+    0 8px 40px rgba(0, 0, 0, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* Subtle yellow glow on the card top edge */
+.game-card::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--cw-yellow), transparent);
+  opacity: 0.4;
+  z-index: 3;
+}
+
+/* Canvas holder — maintains 16:9 aspect ratio */
+.canvas-holder {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  overflow: hidden;
+}
+
+#game {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
   display: block;
-  max-width: 100vw;
+  object-fit: contain;
+}
+
+/* --- Info Strip below canvas --- */
+.info-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  background: rgba(255, 255, 255, 0.02);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.info-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.info-tag {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(255, 203, 61, 0.1);
+  color: var(--cw-yellow);
+}
+
+.info-desc {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.45);
+  font-weight: 400;
+}
+
+.info-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.key-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.35);
+  font-weight: 500;
+}
+
+.key-hint kbd {
+  font-family: 'DM Mono', 'SF Mono', monospace;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* --- Fullscreen button --- */
+.fullscreen-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  margin-left: 8px;
+}
+
+.fullscreen-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--cw-yellow);
+  border-color: rgba(255, 203, 61, 0.2);
+}
+
+.fullscreen-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.fullscreen-btn:focus-visible {
+  outline: 2px solid var(--cw-yellow);
+  outline-offset: 2px;
+}
+
+/* --- Bottom Bar --- */
+.bottom-bar {
+  width: 100%;
+  max-width: 1060px;
+  padding: 16px 32px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cta-link {
+  font-size: 13px;
+  color: var(--cw-water-blue);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cta-link:hover {
+  color: var(--cw-yellow);
+}
+
+.cta-link svg {
+  width: 14px;
+  height: 14px;
+}
+
+.credit {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.credit a {
+  color: rgba(255, 255, 255, 0.35);
+  text-decoration: none;
+}
+
+.credit a:hover {
+  color: var(--cw-yellow);
+}
+
+/* ============================================================
+   RESPONSIVE: TABLET
+   ============================================================ */
+@media (max-width: 900px) {
+  .top-bar { padding: 16px 20px 10px; }
+  .game-frame { padding: 0 16px; }
+  .info-controls { display: none; }
+  .info-strip { padding: 12px 16px; }
+  .bottom-bar { padding: 12px 20px 20px; }
+}
+
+/* ============================================================
+   RESPONSIVE: MOBILE — immersive game-first layout
+   ============================================================ */
+@media (max-width: 600px) {
+  body { background: #000; }
+  .bg-atmosphere, .bg-grain { display: none; }
+  .page-wrapper { min-height: 100dvh; justify-content: center; }
+  .top-bar { padding: 10px 16px 6px; }
+  .brand-text { font-size: 12px; }
+  .top-links { display: none; }
+  .game-frame { padding: 0; margin-top: 0; }
+  .game-card {
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    background: #000;
+  }
+  .game-card::before { display: none; }
+  .canvas-holder { aspect-ratio: 16 / 9; }
+  .info-strip {
+    background: rgba(255, 255, 255, 0.03);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 10px 16px;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+  }
+  .info-controls { display: none; }
+  .bottom-bar {
+    padding: 10px 16px 16px;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+  }
+  .credit { text-align: center; }
+}
+
+/* ============================================================
+   RESPONSIVE: MOBILE LANDSCAPE — maximize game area
+   ============================================================ */
+@media (max-height: 500px) and (orientation: landscape) {
+  .top-bar, .info-strip, .bottom-bar { display: none; }
+  .page-wrapper { justify-content: center; }
+  .game-frame { padding: 0; margin: 0; max-width: 100%; }
+  .game-card {
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    background: #000;
+  }
+  .game-card::before { display: none; }
+  .canvas-holder { height: 100dvh; aspect-ratio: auto; }
+  #game { object-fit: contain; }
+}
+
+/* ============================================================
+   FULLSCREEN STATE
+   ============================================================ */
+.game-card:fullscreen,
+.game-card:-webkit-full-screen {
+  border-radius: 0;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-card:fullscreen .canvas-holder,
+.game-card:-webkit-full-screen .canvas-holder {
   max-height: 100vh;
+  max-width: 100vw;
+}
+
+.game-card:fullscreen .info-strip,
+.game-card:-webkit-full-screen .info-strip {
+  display: none;
+}
+
+/* ============================================================
+   ORIENTATION OVERLAY — mobile portrait warning
+   ============================================================ */
+
+/* Hidden by default on desktop and landscape */
+.orientation-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(10, 14, 23, 0.97);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+/* CSS-driven: show on small portrait screens automatically */
+@media (max-width: 768px) and (orientation: portrait) {
+  .orientation-overlay {
+    display: flex;
+  }
+
+  /* JS adds .dismissed when user clicks "Play Anyway" */
+  .orientation-overlay.dismissed {
+    display: none !important;
+  }
+}
+
+/* Force-hide on landscape — always, even if somehow .dismissed isn't set */
+@media (orientation: landscape) {
+  .orientation-overlay {
+    display: none !important;
+  }
+}
+
+/* Force-hide on desktop */
+@media (min-width: 769px) {
+  .orientation-overlay {
+    display: none !important;
+  }
+}
+
+.orientation-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 32px;
+  text-align: center;
+  max-width: 340px;
+}
+
+/* Phone + rotate arrow combo */
+.orientation-icon-wrapper {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.phone-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: tilt-phone 2.4s ease-in-out infinite;
+  transform-origin: center center;
+  color: var(--cw-yellow);
+}
+
+.rotate-arrow {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  animation: pulse-rotate 2.4s ease-in-out infinite;
+  color: var(--cw-water-blue);
+}
+
+@keyframes tilt-phone {
+  0%, 100% { transform: rotate(0deg); }
+  30%      { transform: rotate(-90deg); }
+  60%      { transform: rotate(-90deg); }
+  90%      { transform: rotate(0deg); }
+}
+
+@keyframes pulse-rotate {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  30%      { opacity: 0.3; transform: scale(0.8); }
+  60%      { opacity: 0.3; transform: scale(0.8); }
+  90%      { opacity: 1; transform: scale(1); }
+}
+
+.orientation-title {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--cw-yellow);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.orientation-desc {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.orientation-dismiss {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 10px 20px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.orientation-dismiss:hover,
+.orientation-dismiss:active {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  border-color: rgba(255, 255, 255, 0.15);
 }
